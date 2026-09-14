@@ -4,6 +4,11 @@ source "https://rubygems.org"
 gem "rails", "~> 8.1.3", ">= 8.1.3.1"
 # Use PostgreSQL as the database for Active Record
 gem "pg", "~> 1.1"
+# Pin below json 3.x: ActiveSupport::JSON.decode (used by every serialized/jsonb
+# AR column) calls `::JSON.parse(json, options)` positionally, which json 3.x's
+# keyword-only signature rejects with ArgumentError. Ruby 4.0's bundled default
+# is 3.0.2; this pin overrides it until Rails ships a compatible release.
+gem "json", "~> 2.21"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]

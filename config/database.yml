@@ -4,8 +4,15 @@ default: &default
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
 development:
-  <<: *default
-  database: demo_ecom_api_development
+  primary: &primary_development
+    <<: *default
+    database: demo_ecom_api_development
+  # Solid Queue's tables live in the same physical database as `primary`
+  # (DECISION-003/016) — this role only exists so its schema can be loaded
+  # separately via db/queue_schema.rb, matching production's structure.
+  queue:
+    <<: *primary_development
+    migrations_paths: db/queue_migrate
 
 test:
   <<: *default

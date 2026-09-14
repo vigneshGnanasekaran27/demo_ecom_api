@@ -28,6 +28,10 @@ Rails.application.configure do
   # Disable request forgery protection in test environment.
   config.action_controller.allow_forgery_protection = false
 
+  # Run jobs synchronously in-memory during tests — deterministic assertions
+  # (assert_enqueued_jobs, perform_enqueued_jobs), no real worker process needed.
+  config.active_job.queue_adapter = :test
+
   # Store uploaded files on the local file system in a temporary directory.
   config.active_storage.service = :test
 
