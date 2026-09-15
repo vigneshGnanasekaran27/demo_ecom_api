@@ -15,7 +15,7 @@ gem "puma", ">= 5.0"
 # gem "jbuilder"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
-# gem "bcrypt", "~> 3.1.7"
+gem "bcrypt", "~> 3.1.7"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
@@ -33,8 +33,21 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
 
+# Product images live on Cloudinary, not Render's ephemeral local disk (DECISION-010)
+gem "cloudinary"
+
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
+
+# JSON Web Tokens for the httpOnly-cookie auth scheme (DECISION-014)
+gem "jwt"
+
+# Authorization policies (AUTH-10)
+gem "pundit"
+
+# Rate-limit auth endpoints against brute-force/spam (AUTH-17)
+gem "rack-attack"
+gem "razorpay"
 
 group :development, :test do
   # Load environment variables from .env in development/test (Render sets real

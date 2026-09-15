@@ -26,8 +26,13 @@ Rails.application.configure do
   # Change to :null_store to avoid any caching.
   config.cache_store = :memory_store
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Product images go to Cloudinary in development when real credentials are
+  # configured (DECISION-010), matching production. Falls back to local disk
+  # otherwise (no CLOUDINARY_URL set) so the app remains usable without
+  # requiring every developer to provision a Cloudinary account — see
+  # DECISION-025. Automatically switches back to Cloudinary the moment
+  # CLOUDINARY_URL is set; no manual toggle needed.
+  config.active_storage.service = ENV["CLOUDINARY_URL"].present? ? :cloudinary : :local
 
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false

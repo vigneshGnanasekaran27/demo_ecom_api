@@ -40,5 +40,13 @@ module DemoEcomApi
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # httpOnly cookie-based auth (DECISION-014) needs the cookie jar that
+    # api_only mode skips by default; ActionController::Cookies is included
+    # in ApplicationController to expose it to controllers.
+    config.middleware.use ActionDispatch::Cookies
+
+    # Throttling rules live in config/initializers/rack_attack.rb (AUTH-17).
+    config.middleware.use Rack::Attack
   end
 end

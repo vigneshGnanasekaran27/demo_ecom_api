@@ -6,6 +6,13 @@ local:
   service: Disk
   root: <%= Rails.root.join("storage") %>
 
+# Product images (DECISION-010) — never Render's ephemeral local disk. The
+# `cloudinary` gem reads the CLOUDINARY_URL env var automatically to
+# configure the account (cloud_name/api_key/api_secret), so no credentials
+# are declared here.
+cloudinary:
+  service: Cloudinary
+
 # Use bin/rails credentials:edit to set the AWS secrets (as aws:access_key_id|secret_access_key)
 # amazon:
 #   service: S3
