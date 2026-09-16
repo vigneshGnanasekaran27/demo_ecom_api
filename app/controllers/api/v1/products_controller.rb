@@ -4,15 +4,22 @@ module Api
       DEFAULT_PER_PAGE = 20
       MAX_PER_PAGE = 100
 
-      # GET /api/v1/products
+      # GET /api/v1/products?q=turmeric&category=whole-spices
       #
-      # Public — active products only, paginated. Card-level fields
-      # (ProductListSerializer).
+      # Public — active products only, paginated, optionally searched by
+      # name and/or filtered by category slug (matches the links
+      # CategoryShowcase already generates on the landing page).
       def index
         page = [ params[:page].to_i, 1 ].max
         per_page = params[:per_page].present? ? params[:per_page].to_i.clamp(1, MAX_PER_PAGE) : DEFAULT_PER_PAGE
 
         scope = Product.active.order(:position, :name)
+        if params[:q].present?
+          scope = scope.where("name ILIKE ?", "%#{Product.sanitize_sql_like(params[:q])}%")
+        end
+        if params[:category].present?
+          scope = scope.joins(:category).where(categories: { slug: params[:category] })
+        end
         total = scope.count
         # Eager-load images (for ProductListSerializer#thumbnail_url) to avoid
         # an N+1 query per product (BACKEND_RULES.md §34).
