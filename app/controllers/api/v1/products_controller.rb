@@ -15,7 +15,10 @@ module Api
 
         scope = Product.active.order(:position, :name)
         if params[:q].present?
-          scope = scope.where("name ILIKE ?", "%#{Product.sanitize_sql_like(params[:q])}%")
+          # Qualified as products.name — combined with the category join
+          # below, an unqualified "name" is ambiguous (categories also has
+          # a name column) and raises PG::AmbiguousColumn.
+          scope = scope.where("products.name ILIKE ?", "%#{Product.sanitize_sql_like(params[:q])}%")
         end
         if params[:category].present?
           scope = scope.joins(:category).where(categories: { slug: params[:category] })
