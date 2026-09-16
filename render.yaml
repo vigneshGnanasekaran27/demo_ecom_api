@@ -1,0 +1,75 @@
+# Render Blueprint (DECISION-006) — one Postgres database, one Rails web
+# service, one Solid Queue background worker (BACKEND_RULES.md §27: no Redis,
+# jobs run against the same Postgres database as the app). No Docker.
+#
+# Usage: on Render, "New +" -> "Blueprint", point it at this repo. Render
+# reads this file and provisions everything below. Env vars marked
+# `sync: false` are secrets — Render will prompt for each one during blueprint
+# setup; get the values from demo_ecom_api/.env (RAZORPAY_*, RESEND_API_KEY,
+# CLOUDINARY_URL, SEED_ADMIN_*) and `cat config/master.key` (RAILS_MASTER_KEY).
+# FRONTEND_URL must be set to the deployed Vercel URL (see demo_ecom_web) —
+# it can be added after the first deploy once that URL is known.
+#
+# Plan names below are Render's current smallest paid tiers (AI_RULES.md §14:
+# never `free` — cold starts are unacceptable during a live demo). Adjust in
+# the Render dashboard if a larger tier is needed.
+
+databases:
+  - name: demo-ecom-db
+    plan: 0.1c-256mb
+    postgresMajorVersion: "17"
+
+services:
+  - type: web
+    name: demo-ecom-api
+    runtime: ruby
+    plan: 0.5c-512mb
+    buildCommand: "bundle install && bin/rails db:prepare"
+    startCommand: "bin/rails server"
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: demo-ecom-db
+          property: connectionString
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: SEED_ADMIN_EMAIL_1
+        sync: false
+      - key: SEED_ADMIN_EMAIL_2
+        sync: false
+      - key: SEED_ADMIN_EMAIL_3
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+
+  - type: worker
+    name: demo-ecom-worker
+    runtime: ruby
+    plan: 0.5c-512mb
+    buildCommand: "bundle install"
+    startCommand: "bin/jobs"
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: demo-ecom-db
+          property: connectionString
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false

@@ -2,14 +2,30 @@
 # (find_or_create_by!) so bin/rails db:seed is safe to re-run at any time.
 
 # == Users =====================================================================
-# One account per role (admin, manager, warehouse, dispatch, delivery) plus a
-# sample customer or two, per PROJECT_CONTEXT.md §4.
-#
-#   User.find_or_create_by!(email: "admin@example.com") do |user|
-#     user.full_name = "Demo Admin"
-#     user.password = "..."
-#     user.role = "admin"
-#   end
+# Demo admin accounts (SEED-01). Credentials come from ENV only — never
+# hardcoded (AI_RULES.md §10, BACKEND_RULES.md §30). An admin whose email
+# ENV var is blank is simply skipped rather than seeded with a guessed
+# value; if SEED_ADMIN_PASSWORD is blank, no admin accounts are (re)seeded.
+admin_emails = [
+  ENV["SEED_ADMIN_EMAIL_1"],
+  ENV["SEED_ADMIN_EMAIL_2"],
+  ENV["SEED_ADMIN_EMAIL_3"]
+]
+admin_password = ENV["SEED_ADMIN_PASSWORD"]
+
+if admin_password.present?
+  admin_emails.each_with_index do |email, index|
+    next if email.blank?
+
+    user = User.find_or_initialize_by(email: email.downcase.strip)
+    user.full_name = "Admin #{index + 1}"
+    user.password = admin_password
+    user.role = "admin"
+    user.save!
+  end
+else
+  warn "SEED_ADMIN_PASSWORD not set — skipping admin account seeding."
+end
 
 # == Categories & Products (Indian spices catalog) ============================
 # Populated ahead of the formal Phase 26 pass, specifically to give the
