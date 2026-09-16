@@ -19,27 +19,39 @@
 #
 # Each product gets 2 real (not fabricated) photos attached via
 # ActiveStorage, sourced from db/seed_assets/spice_photos/ — see that
-# directory's MANIFEST.md for the Commons source/license of each file, and
-# for a list of rejected candidates (several Commons search results turned
-# out to be real competitor brands' actual packaged-product photography,
-# which must never be displayed as if it were this demo's own product).
-# Several products share a photo from that small curated pool rather than
-# having one uniquely dedicated to each SKU — reasonable for dummy/demo
-# imagery, and preferable to forcing a bad match. DECISION-025 covers why
-# this replaced the earlier illustrated/generated-monogram approach, and
-# DECISION-010/DECISION-025 cover local-disk vs. Cloudinary storage.
+# directory's MANIFEST.md for what each file shows. Only 8 photos exist for
+# the 7 curated products below, so a couple of products still share a photo
+# rather than every SKU having one uniquely dedicated to it — reasonable for
+# dummy/demo imagery, and preferable to forcing a bad match. DECISION-025
+# covers why this replaced the earlier illustrated/generated-monogram
+# approach, and DECISION-010/DECISION-025 cover local-disk vs. Cloudinary
+# storage. The photo set was replaced 2026-09-16 (user-provided images) —
+# the previous Wikimedia-sourced set is archived at
+# db/seed_assets/spice_photos_legacy/, unused by this file. The catalog
+# itself was trimmed from 20 products to 7 curated ones the same day (see
+# the deactivation step below the `products` array) so the landing page's
+# redesigned sections show a smaller, higher-quality set instead of padding
+# for volume.
 SPICE_PHOTOS_DIR = Rails.root.join("db/seed_assets/spice_photos")
 
-def attach_seed_image!(product, filename, position)
-  return if product.product_images.exists?(position: position)
+# Always resets each product's photos to exactly the 2 filenames specified
+# below, purging whatever was attached before (rather than the previous
+# skip-if-already-attached behavior) — so re-running db:seed after changing
+# the images: list actually replaces the old photos instead of leaving them
+# in place.
+def attach_seed_images!(product, filenames)
+  product.product_images.find_each { |image| image.image.purge if image.image.attached? }
+  product.product_images.destroy_all
 
-  path = SPICE_PHOTOS_DIR.join(filename)
-  image = product.product_images.create!(position: position, alt_text: product.name)
-  image.image.attach(
-    io: File.open(path),
-    filename: filename,
-    content_type: "image/jpeg"
-  )
+  filenames.each_with_index do |filename, position|
+    path = SPICE_PHOTOS_DIR.join(filename)
+    image = product.product_images.create!(position: position, alt_text: product.name)
+    image.image.attach(
+      io: File.open(path),
+      filename: filename,
+      content_type: "image/png"
+    )
+  end
 end
 
 # Retire the old placeholder catalog by its known slugs only (never a blanket
@@ -72,127 +84,85 @@ end
 # position: explicit curation order (cross-category mix) rather than
 # insertion order, so /api/v1/products (ordered by position, name) surfaces a
 # varied "featured" set for the landing page's FeaturedProducts section.
+# Trimmed 2026-09-16 from 20 products to these 7 — one or two per category so
+# every "Shop by category" tile has real products behind it, a mix of
+# discounted/full-price items, and one deliberately out-of-stock item
+# (whole-cloves-laung) preserved so the out-of-stock badge stays demoable.
 products = [
   { position: 0, category: "masalas", sku: "SPC-MS-01", slug: "classic-garam-masala",
     name: "Classic Garam Masala", price_cents: 18_900, discount_percent: 12, stock_quantity: 50,
     description: "A warm, aromatic blend of roasted whole spices, stone-ground in small batches.",
     specifications: { origin: "Kerala", net_weight_g: 100, form: "Blend", shelf_life_months: 12 },
-    images: %w[sambar-powder.jpg detail-spices-kitchen.jpg] },
+    images: %w[garam-masala-blend.png cinnamon.png] },
   { position: 1, category: "ground-spices", sku: "SPC-GS-01", slug: "alleppey-turmeric-powder",
     name: "Alleppey Turmeric Powder", price_cents: 12_900, discount_percent: 15, stock_quantity: 60,
     description: "High-curcumin turmeric from Alleppey, sun-dried and stone-milled for deep colour and flavour.",
     specifications: { origin: "Alleppey, Kerala", net_weight_g: 200, form: "Ground", shelf_life_months: 18 },
-    images: %w[turmeric-powder.jpg detail-spices-kitchen.jpg] },
-  { position: 2, category: "ground-spices", sku: "SPC-GS-02", slug: "kashmiri-red-chilli-powder",
-    name: "Kashmiri Red Chilli Powder", price_cents: 15_900, discount_percent: 0, stock_quantity: 55,
-    description: "Mild heat, vivid colour — the classic chilli powder for a rich, restaurant-red gravy.",
-    specifications: { origin: "Kashmir", net_weight_g: 200, form: "Ground", shelf_life_months: 18 },
-    images: %w[red-chilli-powder.jpg detail-spices-assortment.jpg] },
-  { position: 3, category: "blended-spices", sku: "SPC-BS-03", slug: "hyderabadi-biryani-spice-mix",
-    name: "Hyderabadi Biryani Spice Mix", price_cents: 29_900, discount_percent: 0, stock_quantity: 22,
-    description: "A layered blend built for dum biryani — whole and ground spices in one authentic mix.",
-    specifications: { origin: "Hyderabad", net_weight_g: 150, form: "Blend", shelf_life_months: 12 },
-    images: %w[detail-spices-assortment.jpg cinnamon-sticks.jpg] },
-  { position: 4, category: "whole-spices", sku: "SPC-WS-02", slug: "green-cardamom-elaichi",
+    images: %w[turmeric-powder.png cumin-seeds.png] },
+  { position: 2, category: "whole-spices", sku: "SPC-WS-02", slug: "green-cardamom-elaichi",
     name: "Green Cardamom (Elaichi)", price_cents: 39_900, discount_percent: 10, stock_quantity: 25,
     description: "Bold, floral pods hand-sorted for size and aroma — the queen of spices.",
     specifications: { origin: "Idukki, Kerala", net_weight_g: 50, form: "Whole", shelf_life_months: 24 },
-    images: %w[green-cardamom.jpg detail-spices-assortment.jpg] },
-  { position: 5, category: "blended-spices", sku: "SPC-BS-01", slug: "masala-chai-blend",
+    images: %w[cardamom-pods.png cinnamon.png] },
+  { position: 3, category: "blended-spices", sku: "SPC-BS-01", slug: "masala-chai-blend",
     name: "Masala Chai Blend", price_cents: 24_900, discount_percent: 10, stock_quantity: 32,
     description: "Cardamom, ginger, cinnamon, and clove, balanced for a bold, milky cup of chai.",
     specifications: { origin: "Assam", net_weight_g: 100, form: "Blend", shelf_life_months: 12 },
-    images: %w[masala-chai-spices.jpg detail-spices-assortment.jpg] },
-  { position: 6, category: "whole-spices", sku: "SPC-WS-03", slug: "ceylon-cinnamon-sticks",
-    name: "Ceylon Cinnamon Sticks (Dalchini)", price_cents: 19_900, discount_percent: 0, stock_quantity: 35,
-    description: "True cinnamon, thin-barked and delicately sweet — softer than cassia.",
-    specifications: { origin: "Sri Lanka", net_weight_g: 100, form: "Whole", shelf_life_months: 24 },
-    images: %w[cinnamon-sticks.jpg detail-spices-kitchen.jpg] },
-  { position: 7, category: "masalas", sku: "SPC-MS-02", slug: "sambar-masala",
+    images: %w[cinnamon.png cardamom-pods.png] },
+  { position: 4, category: "masalas", sku: "SPC-MS-02", slug: "sambar-masala",
     name: "Sambar Masala", price_cents: 15_900, discount_percent: 0, stock_quantity: 38,
     description: "A South Indian staple — roasted lentils and spices ground for authentic sambar.",
     specifications: { origin: "Tamil Nadu", net_weight_g: 200, form: "Blend", shelf_life_months: 12 },
-    images: %w[sambar-powder.jpg detail-spices-assortment.jpg] },
-  { position: 8, category: "whole-spices", sku: "SPC-WS-01", slug: "kashmiri-whole-red-chillies",
-    name: "Kashmiri Whole Red Chillies", price_cents: 14_900, discount_percent: 0, stock_quantity: 40,
-    description: "Sun-dried whole chillies prized for colour more than heat.",
-    specifications: { origin: "Kashmir", net_weight_g: 100, form: "Whole", shelf_life_months: 18 },
-    images: %w[whole-red-chillies.jpg detail-spices-kitchen.jpg] },
-  { position: 9, category: "whole-spices", sku: "SPC-WS-04", slug: "black-peppercorns",
-    name: "Black Peppercorns (Kali Mirch)", price_cents: 24_900, discount_percent: 0, stock_quantity: 30,
-    description: "Sun-dried Malabar peppercorns with a sharp, citrusy bite.",
-    specifications: { origin: "Wayanad, Kerala", net_weight_g: 100, form: "Whole", shelf_life_months: 24 },
-    images: %w[black-peppercorns.jpg detail-spices-assortment.jpg] },
-  { position: 10, category: "whole-spices", sku: "SPC-WS-05", slug: "whole-cloves-laung",
+    images: %w[coriander-seeds-powder.png black-pepper.png] },
+  { position: 5, category: "ground-spices", sku: "SPC-GS-02", slug: "kashmiri-red-chilli-powder",
+    name: "Kashmiri Red Chilli Powder", price_cents: 15_900, discount_percent: 0, stock_quantity: 55,
+    description: "Mild heat, vivid colour — the classic chilli powder for a rich, restaurant-red gravy.",
+    specifications: { origin: "Kashmir", net_weight_g: 200, form: "Ground", shelf_life_months: 18 },
+    images: %w[red-chilli-powder.png garam-masala-blend.png] },
+  { position: 6, category: "whole-spices", sku: "SPC-WS-05", slug: "whole-cloves-laung",
     name: "Whole Cloves (Laung)", price_cents: 17_900, discount_percent: 0, stock_quantity: 0,
     description: "Hand-picked clove buds, intensely aromatic — a pinch goes a long way.",
     specifications: { origin: "Tamil Nadu", net_weight_g: 50, form: "Whole", shelf_life_months: 24 },
-    images: %w[whole-cloves.jpg detail-spices-kitchen.jpg] },
-  { position: 11, category: "whole-spices", sku: "SPC-WS-06", slug: "star-anise",
-    name: "Star Anise (Chakra Phool)", price_cents: 22_900, discount_percent: 0, stock_quantity: 20,
-    description: "Deeply fragrant star-shaped pods, essential to biryani and Chinese five-spice alike.",
-    specifications: { origin: "Northeast India", net_weight_g: 50, form: "Whole", shelf_life_months: 24 },
-    images: %w[star-anise.jpg detail-spices-assortment.jpg] },
-  { position: 12, category: "ground-spices", sku: "SPC-GS-03", slug: "coriander-powder-dhania",
-    name: "Coriander Powder (Dhania)", price_cents: 9_900, discount_percent: 0, stock_quantity: 50,
-    description: "Lightly roasted and stone-ground for a warm, citrusy base note.",
-    specifications: { origin: "Rajasthan", net_weight_g: 200, form: "Ground", shelf_life_months: 18 },
-    images: %w[detail-spices-assortment.jpg detail-spices-kitchen.jpg] },
-  { position: 13, category: "ground-spices", sku: "SPC-GS-04", slug: "roasted-cumin-powder-jeera",
-    name: "Roasted Cumin Powder (Jeera)", price_cents: 14_900, discount_percent: 0, stock_quantity: 45,
-    description: "Slow-roasted before milling for a deep, nutty aroma.",
-    specifications: { origin: "Gujarat", net_weight_g: 100, form: "Ground", shelf_life_months: 18 },
-    images: %w[cumin-seeds.jpg detail-spices-kitchen.jpg] },
-  { position: 14, category: "ground-spices", sku: "SPC-GS-05", slug: "black-pepper-powder",
-    name: "Black Pepper Powder", price_cents: 21_900, discount_percent: 0, stock_quantity: 28,
-    description: "Freshly milled from whole Malabar peppercorns for maximum bite.",
-    specifications: { origin: "Wayanad, Kerala", net_weight_g: 100, form: "Ground", shelf_life_months: 18 },
-    images: %w[ground-black-pepper.jpg black-peppercorns.jpg] },
-  { position: 15, category: "blended-spices", sku: "SPC-BS-02", slug: "chaat-masala",
-    name: "Chaat Masala", price_cents: 12_900, discount_percent: 0, stock_quantity: 40,
-    description: "Tangy, smoky, and a little salty — finishes street food and fruit alike.",
-    specifications: { origin: "Delhi", net_weight_g: 100, form: "Blend", shelf_life_months: 12 },
-    images: %w[sambar-powder.jpg detail-spices-kitchen.jpg] },
-  { position: 16, category: "blended-spices", sku: "SPC-BS-04", slug: "tandoori-masala",
-    name: "Tandoori Masala", price_cents: 17_900, discount_percent: 0, stock_quantity: 26,
-    description: "Smoky, brick-red marinade spice built for the tandoor.",
-    specifications: { origin: "Punjab", net_weight_g: 100, form: "Blend", shelf_life_months: 12 },
-    images: %w[red-chilli-powder.jpg sambar-powder.jpg] },
-  { position: 17, category: "masalas", sku: "SPC-MS-03", slug: "rasam-powder",
-    name: "Rasam Powder", price_cents: 13_900, discount_percent: 0, stock_quantity: 33,
-    description: "Peppery, tamarind-friendly spice mix for a comforting South Indian rasam.",
-    specifications: { origin: "Tamil Nadu", net_weight_g: 100, form: "Blend", shelf_life_months: 12 },
-    images: %w[sambar-powder.jpg detail-spices-kitchen.jpg] },
-  { position: 18, category: "masalas", sku: "SPC-MS-04", slug: "pav-bhaji-masala",
-    name: "Pav Bhaji Masala", price_cents: 14_900, discount_percent: 0, stock_quantity: 0,
-    description: "The signature blend behind Mumbai's favourite street-food mash.",
-    specifications: { origin: "Maharashtra", net_weight_g: 100, form: "Blend", shelf_life_months: 12 },
-    images: %w[red-chilli-powder.jpg detail-spices-assortment.jpg] },
-  { position: 19, category: "masalas", sku: "SPC-MS-05", slug: "kitchen-king-masala",
-    name: "Kitchen King Masala", price_cents: 16_900, discount_percent: 0, stock_quantity: 29,
-    description: "An all-purpose blend for everyday curries and vegetable dishes.",
-    specifications: { origin: "Uttar Pradesh", net_weight_g: 100, form: "Blend", shelf_life_months: 12 },
-    images: %w[sambar-powder.jpg ground-black-pepper.jpg] }
+    images: %w[cardamom-pods.png black-pepper.png] }
 ].freeze
 
 products.each do |attrs|
-  category_slug = attrs.fetch(:category)
-  product = Product.find_or_create_by!(slug: attrs.fetch(:slug)) do |p|
-    p.category = categories.fetch(category_slug)
-    p.sku = attrs.fetch(:sku)
-    p.name = attrs.fetch(:name)
-    p.description = attrs.fetch(:description)
-    p.price_cents = attrs.fetch(:price_cents)
-    p.discount_percent = attrs.fetch(:discount_percent)
-    p.stock_quantity = attrs.fetch(:stock_quantity)
-    p.position = attrs.fetch(:position)
-    p.specifications = attrs.fetch(:specifications).stringify_keys
-    p.status = "active"
-  end
+  # find_or_initialize_by (not the previous find_or_create_by!) so catalog
+  # data — category/name/price/discount/position/specifications — always
+  # converges to what's declared here, even for a product that already
+  # existed from an earlier seed run (this is what makes the position
+  # renumbering below actually take effect on a re-seed). `stock_quantity`
+  # is deliberately the one field left create-only: it changes via real
+  # cart/order activity during a demo, and reseeding shouldn't silently
+  # undo that mid-demo.
+  product = Product.find_or_initialize_by(slug: attrs.fetch(:slug))
+  product.category = categories.fetch(attrs.fetch(:category))
+  product.sku = attrs.fetch(:sku)
+  product.name = attrs.fetch(:name)
+  product.description = attrs.fetch(:description)
+  product.price_cents = attrs.fetch(:price_cents)
+  product.discount_percent = attrs.fetch(:discount_percent)
+  product.stock_quantity = attrs.fetch(:stock_quantity) if product.new_record?
+  product.position = attrs.fetch(:position)
+  product.specifications = attrs.fetch(:specifications).stringify_keys
+  product.status = "active"
+  product.save!
 
-  attrs.fetch(:images).each_with_index do |filename, index|
-    attach_seed_image!(product, filename, index)
-  end
+  attach_seed_images!(product, attrs.fetch(:images))
+end
+
+# Deactivate (never destroy) any previously-seeded product that's no longer
+# in the curated list above. `CartItem`/`OrderItem` both `belongs_to
+# :product` with no `dependent:` policy declared on Product's side, so
+# destroying a product a real cart/order row already references would risk
+# a foreign-key error or, worse, cascading into order history — a `Product`
+# has an existing `active`/`inactive` status (AI_RULES.md §22's "Deactivate
+# product") and `Product.active` is already what every public endpoint
+# scopes on (`Api::V1::ProductsController`), so deactivating is the safe,
+# reversible way to shrink what the storefront shows.
+kept_slugs = products.map { |attrs| attrs.fetch(:slug) }
+categories.each_value do |category|
+  category.products.where.not(slug: kept_slugs).update_all(status: "inactive")
 end
 
 # == Orders =====================================================================
